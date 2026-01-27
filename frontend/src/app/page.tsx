@@ -21,6 +21,14 @@ export default function Home() {
           Sign Up
         </Link>
       </div>
+      <div className="mt-8">
+        <Link
+          href="/chat"
+          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+        >
+          Chat with AI Assistant
+        </Link>
+      </div>
     </main>
   );
 }

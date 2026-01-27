@@ -16,9 +16,11 @@ python-dotenv>=1.0.0
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
 
+# HTTP client for API calls
+httpx>=0.26.0
+
 # Development tools
 ruff>=0.2.0
 black>=24.1.0
 pytest>=7.4.0
 pytest-asyncio>=0.23.0
-httpx>=0.26.0

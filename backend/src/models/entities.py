@@ -13,6 +13,7 @@ from sqlmodel import SQLModel, Field, Relationship
 
 
 class User(SQLModel, table=True):
+    __tablename__ = "users"
     """
     User entity representing an authenticated user.
 
@@ -46,15 +47,17 @@ class Todo(SQLModel, table=True):
         is_complete: Completion status (default false)
         created_at: Creation timestamp
         updated_at: Last update timestamp
+        completed_at: Timestamp when the todo was marked as complete (nullable)
     """
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
+    user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     title: str = Field(min_length=1, max_length=200)
     description: Optional[str] = Field(default=None, max_length=2000)
     is_complete: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = Field(default=None)
 
     # Relationship to user
     user: "User" = Relationship(back_populates="todos")

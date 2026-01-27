@@ -25,3 +25,5 @@ coverage/
 *.swp
 .DS_Store
 Thumbs.db
+/frontend/nul
+/nul

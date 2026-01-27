@@ -1,0 +1,7 @@
+INFO:     Will watch for changes in these directories: ['D:\\Spec-driven-dev\\Hackathon-II\\todo-app-cli\\backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [20992] using WatchFiles
+INFO:     Started server process [14424]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src\api\chat_api.py'. Reloading...

@@ -13,6 +13,8 @@ from .database import (
     TimestampMixin,
 )
 from .entities import User, Todo
+from .conversation import Conversation
+from .message import Message
 
 __all__ = [
     "sync_engine",
@@ -22,4 +24,6 @@ __all__ = [
     "TimestampMixin",
     "User",
     "Todo",
+    "Conversation",
+    "Message",
 ]

@@ -9,9 +9,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session
 
-from src.models import User, Todo
-from src.services import get_user_by_id, get_todo_by_id, verify_ownership
-from src.models.database import get_db
+from ..models import User, Todo
+from ..services import get_user_by_id, get_todo_by_id, verify_ownership
+from ..models.database import get_db
 
 
 # HTTP Bearer token security scheme
@@ -44,25 +44,47 @@ def get_current_user(
 
     # Extract user ID from token (simplified - in production use proper JWT/session validation)
     user_id_str = credentials.credentials
+    print(f"Received token: {user_id_str}")  # Debug log
+
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     try:
         import uuid
-        user_id = uuid.UUID(user_id_str)
-    except ValueError:
+
+        # Handle potential UUID format variations by normalizing the string
+        # Remove any whitespace and convert to lowercase
+        normalized_token = user_id_str.strip().lower()
+
+        # Attempt to parse as UUID, handling common format issues
+        user_id = uuid.UUID(normalized_token)
+        print(f"Parsed user ID: {user_id}")  # Debug log
+    except ValueError as e:
+        print(f"Invalid token format: {user_id_str}, error: {e}")  # Debug log
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication token",
+            detail=f"Invalid authentication token format: {user_id_str}. Please ensure you're logged in.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     user = get_user_by_id(db, user_id)
     if user is None:
+        print(f"User not found for ID: {user_id}")  # Debug log
+        # Debug: List all users in database
+        from sqlmodel import select
+        all_users = db.execute(select(User)).scalars().all()
+        print(f"All users in DB: {[(u.id, u.email) for u in all_users]}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            detail="User not found. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    print(f"Authenticated user: {user.email}")  # Debug log
     return user
 
 

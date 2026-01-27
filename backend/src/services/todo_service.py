@@ -13,18 +13,24 @@ from datetime import datetime
 from ..models import Todo, User
 
 
-def get_todos_by_user(session: Session, user_id: uuid.UUID) -> List[Todo]:
+def get_todos_by_user(session: Session, user_id: uuid.UUID, completed: Optional[bool] = None) -> List[Todo]:
     """
     Retrieve all todos for a user.
 
     Args:
         session: Database session
         user_id: Owning user's UUID
+        completed: Optional filter for completion status (True for completed, False for incomplete, None for all)
 
     Returns:
         List of Todo instances belonging to the user
     """
-    statement = select(Todo).where(Todo.user_id == user_id).order_by(Todo.created_at.desc())
+    statement = select(Todo).where(Todo.user_id == user_id)
+
+    if completed is not None:
+        statement = statement.where(Todo.is_complete == completed)
+
+    statement = statement.order_by(Todo.created_at.desc())
     result = session.execute(statement)
     return list(result.scalars().all())
 
@@ -101,6 +107,14 @@ def update_todo(
         todo.description = description
     if is_complete is not None:
         todo.is_complete = is_complete
+        # Update completed_at based on is_complete status
+        if is_complete:
+            todo.completed_at = datetime.utcnow()
+        else:
+            todo.completed_at = None
+    elif is_complete is None and hasattr(todo, 'is_complete'):
+        # If is_complete is not provided but todo was previously completed and is now incomplete
+        pass  # Don't change completed_at
 
     todo.updated_at = datetime.utcnow()
     return todo
@@ -142,7 +156,54 @@ def toggle_todo_complete(session: Session, todo_id: uuid.UUID) -> Optional[Todo]
 
     todo.is_complete = not todo.is_complete
     todo.updated_at = datetime.utcnow()
+
+    # Update completed_at based on the new is_complete status
+    if todo.is_complete:
+        todo.completed_at = datetime.utcnow()
+    else:
+        todo.completed_at = None
+
     return todo
+
+
+def get_todos_by_title(session: Session, user_id: uuid.UUID, title: str) -> List[Todo]:
+    """
+    Retrieve todos for a user by title (useful for natural language processing).
+
+    Args:
+        session: Database session
+        user_id: User's UUID
+        title: Title to search for
+
+    Returns:
+        List of matching Todo instances
+    """
+    statement = select(Todo).where(
+        Todo.user_id == user_id,
+        Todo.title.ilike(f"%{title}%")  # Case-insensitive partial match
+    )
+    result = session.execute(statement)
+    return list(result.scalars().all())
+
+
+def get_todo_by_title(session: Session, user_id: uuid.UUID, title: str) -> Optional[Todo]:
+    """
+    Retrieve a single todo by user and title (useful for natural language processing).
+
+    Args:
+        session: Database session
+        user_id: User's UUID
+        title: Exact title to search for
+
+    Returns:
+        Todo instance if found, None otherwise
+    """
+    statement = select(Todo).where(
+        Todo.user_id == user_id,
+        Todo.title == title
+    )
+    result = session.execute(statement)
+    return result.scalar_one_or_none()
 
 
 def verify_ownership(todo: Todo, user: User) -> bool:

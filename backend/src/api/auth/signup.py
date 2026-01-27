@@ -6,19 +6,19 @@ Optimized for Neon PostgreSQL with sync database operations.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-from src.models import User
-from src.services import get_user_by_email, create_user, verify_password
-from src.api import get_db, get_current_user
-from src.auth.schemas import (
+from ...models import User
+from ...services import get_user_by_email, create_user, verify_password
+from ..dependencies import get_db, get_current_user
+from ...auth.schemas import (
     SignupRequest,
     SignupResponse,
     SigninRequest,
     SigninResponse,
     SignoutResponse,
 )
-from src.auth.config import settings
+from ...auth.config import settings
 
 
 router = APIRouter()
@@ -57,8 +57,9 @@ async def signup(
     db.refresh(user)
 
     # Create session for auto-login after signup
-    session_token = str(user.id)
-    expires_at = datetime.utcnow() + timedelta(hours=settings.jwt_expiration_hours)
+    # Ensure consistent UUID string representation
+    session_token = str(user.id).lower()  # Ensure user.id is converted to lowercase string UUID
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expiration_hours)
 
     return SignupResponse(
         user={
@@ -99,7 +100,10 @@ async def signin(
         )
 
     # Create session (simplified - using user ID as token for demo)
-    session_token = str(user.id)
+    session_token = str(user.id).lower()  # Ensure user.id is converted to lowercase string UUID
+
+    # Calculate expiration time (same as signup)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expiration_hours)
 
     return SigninResponse(
         user={
@@ -108,7 +112,7 @@ async def signin(
         },
         session={
             "token": session_token,
-            "expires_at": datetime.utcnow().isoformat(),
+            "expires_at": expires_at.isoformat(),
         },
     )
 

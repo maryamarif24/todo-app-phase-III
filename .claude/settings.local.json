@@ -5,7 +5,11 @@
       "Bash(netstat -ano)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev)",
+      "Bash(curl -s http://127.0.0.1:8000/health)",
+      "Bash(curl -s -I http://localhost:3001/)"
     ]
   }
 }

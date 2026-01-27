@@ -57,6 +57,12 @@ export default function TodosPage() {
     e.preventDefault();
     if (!newTodoTitle.trim()) return;
 
+    // Check if user is authenticated before attempting to add todo
+    if (!session?.token) {
+      setError('You must be logged in to add a todo. Please sign in.');
+      return;
+    }
+
     setIsAdding(true);
     const request = {
       title: newTodoTitle.trim(),
@@ -68,6 +74,9 @@ export default function TodosPage() {
     if (response.error) {
       setError(response.error);
       setIsAdding(false);
+      console.error('Failed to add todo:', response.error); // Debug log
+      // Additional debugging information
+      console.error('Request payload:', request);
       return;
     }
 
@@ -96,7 +105,15 @@ export default function TodosPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4" style={{ color: 'rgb(127, 23, 52)' }}>Your Todos</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold" style={{ color: 'rgb(127, 23, 52)' }}>Your Todos</h2>
+        <Link
+          href="/chat"
+          className="px-4 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition"
+        >
+          Chat with AI
+        </Link>
+      </div>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

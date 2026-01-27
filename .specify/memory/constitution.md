@@ -1,15 +1,15 @@
 <!--
 Sync Impact Report:
-- Version change: 2.0.0 → 2.1.0
+- Version change: 2.1.0 → 2.2.0
 - Modified technologies in Phase Technology Matrix:
   - FastAPI: Phase III → Phase II
   - SQLModel: Phase III → Phase II
   - Neon DB: Phase III → Phase II
   - Next.js: Phase IV → Phase II
-  - OpenAI Agents SDK: Phase III → Phase IV
-  - MCP: Phase III → Phase IV
-- Added technologies:
   - Better Auth: Phase II
+  - OpenAI Agents SDK: Phase IV → Phase III
+  - MCP: Phase IV → Phase III
+- Added technologies: None
 - Removed technologies: None
 - Templates requiring updates:
   ✅ .specify/templates/plan-template.md (no constitution-specific mandates)
@@ -53,8 +53,10 @@ All code and architecture MUST adhere to quality standards:
 2. **Stateless Services**: Services MUST be stateless where required (especially for cloud deployment). State is managed explicitly.
 3. **Separation of Concerns**: Each module, function, or service has a single, well-defined responsibility.
 4. **Cloud-Native Readiness**: Architecture is designed for cloud deployment from the beginning (even in early phases).
+5. **Stateless MCP Tools**: MCP tools MUST NOT store in-memory state and MUST rely on database persistence for all state management.
+6. **Agent-Database Interaction**: AI agents MAY ONLY interact with the system via MCP tools; direct database access is prohibited.
 
-**Rationale**: Quality principles ensure code maintains viability across phase evolution. Clean architecture supports incremental complexity without refactoring.
+**Rationale**: Quality principles ensure code maintains viability across phase evolution. Clean architecture supports incremental complexity without refactoring. MCP statelessness ensures reliable agent operations.
 
 ## Technology Constraints
 
@@ -73,9 +75,10 @@ All code and architecture MUST adhere to quality standards:
 #### Authentication
 - **Better Auth**: Authentication framework for signup/signin (Phase II+)
 
-#### Agent & Integration (Phase IV+)
-- **OpenAI Agents SDK**: Agent orchestration and tool usage (Phase IV+)
-- **MCP (Model Context Protocol)**: Agent communication and tool integration (Phase IV+)
+#### Agent & Integration (Phase III+)
+- **OpenAI Agents SDK**: Agent orchestration and tool usage (Phase III+)
+- **MCP (Model Context Protocol)**: Agent communication and tool integration (Phase III+)
+- **Stateless MCP Tools**: MCP tools MUST NOT store in-memory state and MUST rely on database persistence
 
 #### Infrastructure (Later Phases)
 - **Docker**: Containerization (Phase III+)
@@ -91,6 +94,8 @@ All code and architecture MUST adhere to quality standards:
 - **Stateful Services**: Services that maintain implicit state (state MUST be explicit and managed)
 - **Alternative Orchestration**: Kubernetes alternatives (e.g., Docker Swarm, Nomad) unless formally approved
 - **Alternative Messaging**: Kafka alternatives (e.g., RabbitMQ, AWS SQS) unless formally approved
+- **Direct Database Access**: AI agents MUST NOT access database directly; all access MUST be via MCP tools
+- **In-Memory State in MCP Tools**: MCP tools MUST NOT store state in memory; all state MUST be persisted in database
 
 ### Permitted Libraries
 - **Python Standard Library**: Preferred for all simple tasks
@@ -103,10 +108,14 @@ All code and architecture MUST adhere to quality standards:
   - Repository pattern (for database interactions)
   - Service layer pattern
   - CQRS (when appropriate for read/write separation)
+  - Agent-driven task management
+  - Database-backed state management
 - **PROHIBITED**:
   - Over-engineering patterns not justified by phase requirements
   - Design patterns that add unnecessary abstraction
   - Framework-specific lock-in patterns
+  - In-memory state management in MCP tools
+  - Direct database access by AI agents
 
 ## Phase Technology Matrix
 
@@ -122,9 +131,9 @@ All code and architecture MUST adhere to quality standards:
 | TypeScript | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Better Auth | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Docker | ❌ | ❌ | ✅ | ✅ | ✅ |
-| OpenAI Agents SDK | ❌ | ❌ | ❌ | ✅ | ✅ |
-| MCP | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Kubernetes | ❌ | ❌ | ❌ | ❌ | ✅ |
+| OpenAI Agents SDK | ❌ | ❌ | ✅ | ✅ | ✅ |
+| MCP | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Kubernetes | ❌ | ❌ | ❌ | ✅ | ✅ |
 | Kafka | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Dapr | ❌ | ❌ | ❌ | ❌ | ✅ |
 
@@ -135,7 +144,9 @@ All code and architecture MUST adhere to quality standards:
 - Authentication (Better Auth) is allowed starting Phase II
 - Web frontend (Next.js) is allowed starting Phase II
 - Neon PostgreSQL is allowed starting Phase II
-- AI and agent frameworks (OpenAI Agents SDK, MCP) are NOT allowed until Phase IV
+- AI and agent frameworks (OpenAI Agents SDK, MCP) are NOT allowed until Phase III
+- MCP tools must be stateless and rely on database persistence
+- AI agents may ONLY interact with the system via MCP tools
 
 ## Phase Definitions
 
@@ -154,15 +165,17 @@ All code and architecture MUST adhere to quality standards:
 - Better Auth for authentication (signup/signin)
 - Full web application architecture
 
-### Phase III: Containerized Deployment
+### Phase III: Agent-Enabled Containerized Platform
 - Docker containerization
+- OpenAI Agents SDK for agent capabilities
+- MCP (Model Context Protocol) for agent communication and tool integration
+- Stateless MCP tools that rely on database persistence for all state management
+- AI agents MAY ONLY interact with the system via MCP tools
 - Cloud deployment preparation
 - All Phase II technologies continue
 
-### Phase IV: Agent-Enabled Cloud Platform
+### Phase IV: Advanced Cloud Platform
 - Kubernetes orchestration
-- OpenAI Agents SDK for agent capabilities
-- MCP for agent communication
 - Advanced cloud infrastructure
 - All previous phase technologies continue
 
@@ -187,12 +200,19 @@ All code and architecture MUST adhere to quality standards:
 - Request clarification or refinement at spec level
 - Humans DO NOT write code directly—code written by humans MUST be rejected
 
+### AI Agent Role (Phase III+)
+- AI agents MAY ONLY interact with the system via MCP tools (Model Context Protocol)
+- MCP tools MUST NOT store in-memory state; all state MUST be persisted in database
+- AI agents follow approved tasks exactly and MUST NOT deviate from specifications
+- AI agents use OpenAI Agents SDK for orchestration and tool usage
+
 ### Quality Gates
 - All specs MUST have testable acceptance criteria
 - All plans MUST pass Constitution Check (spec-driven, agent behavior, phase governance, quality, technology)
 - All implementations MUST match task specifications exactly
 - Code violating principles MUST be rejected, even if it "works"
 - Technology outside approved phase scope MUST be rejected
+- MCP tools MUST be stateless and rely on database persistence
 
 ### Testing Discipline
 - Tests are OPTIONAL unless explicitly requested in spec
@@ -226,6 +246,8 @@ All code and architecture MUST adhere to quality standards:
 - Any unjustified violation results in rejection during review
 - All PRs/reviews MUST verify alignment with principles and phase technology matrix
 - Technology outside approved phase scope is a critical violation
+- MCP tools MUST be validated for statelessness during compliance review
+- AI agent interactions MUST be verified to occur only through MCP tools
 
 ### Supremacy
 This constitution is the supreme governing document for the "Evolution of Todo" project. It supersedes all other practices, guidelines, or conventions. All agents, humans, and processes MUST comply with this constitution without exception.
@@ -233,4 +255,4 @@ This constitution is the supreme governing document for the "Evolution of Todo" 
 ### Scope Boundaries
 This constitution governs Phase I through Phase V of the "Evolution of Todo" project. Each phase is scoped independently by its specification, but all phases remain bound by these core principles and governance rules. Phases beyond V require formal constitution amendment.
 
-**Version**: 2.1.0 | **Ratified**: 2024-12-24 | **Last Amended**: 2024-12-27
+**Version**: 2.2.0 | **Ratified**: 2024-12-24 | **Last Amended**: 2026-01-06

@@ -19,14 +19,19 @@ DATABASE_URL = os.getenv(
     "postgresql://user:password@ep-xyz.region.neon.tech/dbname?sslmode=require"
 )
 
-# Create sync engine for SQLModel (more stable with Neon)
+# Create sync engine for SQLModel (optimized for Neon PostgreSQL)
 sync_engine = create_engine(
     DATABASE_URL,
     echo=False,
     pool_size=5,
-    max_overflow=0,
+    max_overflow=10,
     pool_pre_ping=True,
-    pool_recycle=3600,
+    pool_recycle=300,  # Reduced recycle time for Neon
+    connect_args={
+        "sslmode": "require",
+        "connect_timeout": 10,
+        # Removed statement_timeout options as they're not supported by Neon
+    }
 )
 
 
@@ -41,7 +46,20 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     """Initialize database tables."""
+    # Create all tables defined in the SQLModel metadata
     SQLModel.metadata.create_all(sync_engine)
+
+    # Verify that tables exist by attempting to reflect them
+    from sqlalchemy import inspect
+    inspector = inspect(sync_engine)
+    tables = inspector.get_table_names()
+    print(f"Database tables: {tables}")
+
+    # Specifically check for users table
+    if 'users' in tables:
+        print("Users table exists in database")
+    else:
+        print("WARNING: Users table does not exist in database!")
 
 
 def close_db() -> None:

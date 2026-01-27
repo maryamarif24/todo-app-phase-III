@@ -54,8 +54,13 @@ export function saveAuthState(user: User, session: Session): void {
 
   // Store session in localStorage for persistence
   if (typeof window !== 'undefined') {
-    localStorage.setItem('auth_user', JSON.stringify(user));
-    localStorage.setItem('auth_session', JSON.stringify(session));
+    try {
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      localStorage.setItem('auth_session', JSON.stringify(session));
+      console.log('Saved auth state:', { user, session }); // Debug log
+    } catch (error) {
+      console.error('Error saving auth state to localStorage:', error);
+    }
   }
 }
 
@@ -93,35 +98,39 @@ export function initAuthState(): AuthState {
     };
   }
 
-  const storedUser = localStorage.getItem('auth_user');
-  const storedSession = localStorage.getItem('auth_session');
+  try {
+    const storedUser = localStorage.getItem('auth_user');
+    const storedSession = localStorage.getItem('auth_session');
 
-  if (storedUser && storedSession) {
-    try {
-      const user = JSON.parse(storedUser);
-      const session = JSON.parse(storedSession);
+    if (storedUser && storedSession) {
+      try {
+        const user = JSON.parse(storedUser);
+        const session = JSON.parse(storedSession);
 
-      // Check if session has expired
-      if (session.expires_at && new Date(session.expires_at) <= new Date()) {
-        clearAuthState();
-        return {
-          user: null,
-          session: null,
+        // Check if session has expired
+        if (session.expires_at && new Date(session.expires_at) <= new Date()) {
+          clearAuthState();
+          return {
+            user: null,
+            session: null,
+            isLoading: false,
+            isAuthenticated: false,
+          };
+        }
+
+        authState = {
+          user,
+          session,
           isLoading: false,
-          isAuthenticated: false,
+          isAuthenticated: true,
         };
+        return authState;
+      } catch {
+        clearAuthState();
       }
-
-      authState = {
-        user,
-        session,
-        isLoading: false,
-        isAuthenticated: true,
-      };
-      return authState;
-    } catch {
-      clearAuthState();
     }
+  } catch (error) {
+    console.error('Error initializing auth state from localStorage:', error);
   }
 
   return {

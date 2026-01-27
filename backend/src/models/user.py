@@ -24,6 +24,8 @@ class User(SQLModel, table=True):
         updated_at: Last update timestamp
     """
 
+    __tablename__ = 'users'
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     email: str = Field(max_length=255, unique=True, index=True)
     password_hash: str = Field(min_length=60)

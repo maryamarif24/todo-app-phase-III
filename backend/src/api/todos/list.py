@@ -9,8 +9,8 @@ from sqlmodel import Session
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
-from src.models import Todo, User
-from src.services import (
+from ...models import Todo, User
+from ...services import (
     get_todos_by_user,
     get_todo_by_id,
     create_todo,
@@ -18,7 +18,7 @@ from src.services import (
     delete_todo,
     toggle_todo_complete,
 )
-from src.api import get_db, get_current_user, get_todo
+from ..dependencies import get_db, get_current_user, get_todo
 
 
 router = APIRouter()
@@ -138,25 +138,75 @@ async def create_todo_endpoint(
     Returns:
         Created todo
     """
-    todo = create_todo(
-        db,
-        current_user.id,
-        request.title,
-        request.description,
-    )
-    db.add(todo)
-    db.commit()
-    db.refresh(todo)
+    # Validate the request data
+    if not request.title or len(request.title.strip()) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Todo title is required",
+        )
 
-    return CreateTodoResponse(
-        id=str(todo.id),
-        user_id=str(todo.user_id),
-        title=todo.title,
-        description=todo.description,
-        is_complete=todo.is_complete,
-        created_at=todo.created_at.isoformat(),
-        updated_at=todo.updated_at.isoformat(),
-    )
+    # Trim the title to remove leading/trailing whitespace
+    title = request.title.strip()
+    description = request.description.strip() if request.description else None
+
+    try:
+        # Validate title length
+        if len(title) > 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Todo title must be 200 characters or less",
+            )
+
+        # Validate description length if provided
+        if description and len(description) > 2000:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Todo description must be 2000 characters or less",
+            )
+
+        todo = create_todo(
+            db,
+            current_user.id,
+            title,
+            description,
+        )
+        db.add(todo)
+        db.commit()
+        db.refresh(todo)
+
+        return CreateTodoResponse(
+            id=str(todo.id),
+            user_id=str(todo.user_id),
+            title=todo.title,
+            description=todo.description,
+            is_complete=todo.is_complete,
+            created_at=todo.created_at.isoformat(),
+            updated_at=todo.updated_at.isoformat(),
+        )
+    except HTTPException:
+        # Re-raise HTTP exceptions with specific details
+        raise
+    except Exception as e:
+        db.rollback()
+        error_detail = str(e)
+        print(f"Error creating todo: {error_detail}")  # Debug log
+
+        # Provide more specific error messages based on the exception type
+        if "duplicate" in error_detail.lower() or "unique" in error_detail.lower():
+            error_msg = "A todo with similar properties already exists"
+        elif "foreign key" in error_detail.lower():
+            error_msg = "User not found. Please log in again."
+        elif "not null" in error_detail.lower() or "constraint" in error_detail.lower():
+            error_msg = "Required field is missing or invalid"
+        elif "connection" in error_detail.lower() or "database" in error_detail.lower():
+            error_msg = "Database connection error - please try again later"
+        else:
+            error_msg = f"Failed to create todo: {error_detail}"
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=error_msg,
+        )
 
 
 @router.get("/{todo_id}", response_model=TodoResponse)

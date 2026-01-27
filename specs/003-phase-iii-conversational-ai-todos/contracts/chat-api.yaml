@@ -1,0 +1,89 @@
+openapi: 3.0.0
+info:
+  title: Chat API for Conversational AI Todo Management
+  description: API for interacting with the conversational AI todo management system
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+    description: Production server
+  - url: http://localhost:8000
+    description: Development server
+
+paths:
+  /api/chat:
+    post:
+      summary: Send a message to the AI and receive a response
+      description: Process a user's natural language message and return an AI-generated response
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  description: The user's message to the AI
+                  example: "Add buy groceries to my todos"
+      responses:
+        '200':
+          description: Successful response from the AI
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - response
+                properties:
+                  response:
+                    type: string
+                    description: The AI's response to the user
+                    example: "I've added 'buy groceries' to your todos."
+                  conversation_id:
+                    type: string
+                    description: The ID of the conversation (for context)
+                    example: "123e4567-e89b-12d3-a456-426614174000"
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+                    example: "Message is required"
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+                    example: "Authentication required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+                    example: "Internal server error"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -23,21 +23,35 @@ export interface ApiResponse<T> {
 function getAuthHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
 
-  const sessionStr = localStorage.getItem('auth_session');
-  if (!sessionStr) return {};
-
   try {
-    const session = JSON.parse(sessionStr);
-    if (session?.token) {
-      return {
-        Authorization: `Bearer ${session.token}`,
-      };
+    const sessionStr = localStorage.getItem('auth_session');
+    if (!sessionStr) {
+      console.warn('No auth session found in localStorage');
+      return {};
     }
-  } catch {
-    // Invalid session data
-  }
 
-  return {};
+    const session = JSON.parse(sessionStr);
+    if (!session?.token) {
+      console.warn('No token found in auth session');
+      return {};
+    }
+
+    // Validate that the token is not expired
+    if (session?.expires_at && new Date(session.expires_at) <= new Date()) {
+      console.warn('Auth session has expired');
+      localStorage.removeItem('auth_session');
+      localStorage.removeItem('auth_user');
+      return {};
+    }
+
+    console.log('Successfully retrieved auth token'); // Debug log
+    return {
+      Authorization: `Bearer ${session.token}`,
+    };
+  } catch (error) {
+    console.error('Error parsing auth session:', error);
+    return {};
+  }
 }
 
 
@@ -52,36 +66,77 @@ export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
+  // Validate API URL
+  if (!API_URL || API_URL.trim() === '') {
+    console.error('API_URL is not configured');
+    return { data: null, error: 'API_URL is not configured. Please check your environment variables.' };
+  }
+
   const url = `${API_URL}${endpoint}`;
 
   const authHeaders = getAuthHeaders();
+  if (typeof window !== 'undefined') {
+    console.log('Auth headers:', authHeaders); // Debug log
+  }
 
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
     ...authHeaders,
   };
 
+  if (typeof window !== 'undefined') {
+    console.log('Final headers for request:', { // Debug log
+      endpoint,
+      authHeaders,
+      defaultHeaders,
+      optionsHeaders: options.headers
+    });
+  }
+
   const config: RequestInit = {
     ...options,
+    credentials: 'include', // Include credentials for CORS requests
     headers: {
       ...defaultHeaders,
       ...options.headers,
     },
   };
 
+  // Add timeout to prevent hanging requests
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
   try {
-    const response = await fetch(url, config);
+    console.log(`Making request to: ${url}`); // Debug log
+    const response = await fetch(url, {
+      ...config,
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
       try {
-        const errorData = await response.json();
-        errorMessage = errorData.detail || errorMessage;
-      } catch {
-        // Response might not be JSON, use default message
+        // Read the response body once
+        const errorText = await response.text();
+        if (errorText) {
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.detail || errorData.message || errorData.error || errorMessage;
+          } catch {
+            // If not JSON, use the raw text
+            errorMessage = errorText || errorMessage;
+          }
+        }
+      } catch (parseError) {
+        // Response might not be readable, use default message
+        console.error('Error parsing error response:', parseError);
       }
 
+      console.error(`API Error: ${errorMessage}`); // Debug log
+      console.error(`Failed request details:`, { endpoint, method: options.method || 'GET', url }); // Additional debug info
       return { data: null, error: errorMessage };
     }
 
@@ -94,6 +149,14 @@ export async function apiFetch<T>(
     const data = await response.json();
     return { data, error: null };
   } catch (error) {
+    clearTimeout(timeoutId);
+
+    if (error.name === 'AbortError') {
+      console.error('Request timed out'); // Debug log
+      return { data: null, error: 'Request timed out. Please check your internet connection.' };
+    }
+
+    console.error('Network error:', error); // Debug log
     const errorMessage = error instanceof Error ? error.message : 'Network error';
     return { data: null, error: errorMessage };
   }
