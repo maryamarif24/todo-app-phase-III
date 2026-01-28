@@ -1,0 +1,10 @@
+# Hugging Face Spaces configuration file
+version: 0.0.2
+
+runtime:
+  cpu: 2
+  memory: 8GiB
+  accelerator: null  # Options: null, "gpu", "tpu"
+  concurrent_instances: 1
+
+sdk: docker

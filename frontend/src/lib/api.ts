@@ -151,7 +151,7 @@ export async function apiFetch<T>(
   } catch (error) {
     clearTimeout(timeoutId);
 
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       console.error('Request timed out'); // Debug log
       return { data: null, error: 'Request timed out. Please check your internet connection.' };
     }
